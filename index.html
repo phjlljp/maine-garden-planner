@@ -1351,17 +1351,14 @@ function PlantingCalendar() {
       </div>
     </div>
 
-      {/* Species list */}
-      <div className="max-w-6xl mx-auto py-5" style={{ paddingLeft: '48px', paddingRight: '48px' }}>
-        <div className="space-y-2">
-          {        {/* What To Do Now Dashboard */}
-        {showDashboard && (
-          <div style={{ backgroundColor: 'rgba(236,231,213,0.7)', borderBottom: '1px dashed #ccc' }}>
-            <div className="max-w-6xl mx-auto" style={{ paddingLeft: '48px', paddingRight: '48px', paddingTop: '12px', paddingBottom: '12px' }}>
-              <button onClick={() => setShowDashboard(!showDashboard)}
-                className="flex items-center gap-2 mb-2" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#333', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                <ChevronUp size={12} /> What To Do Now
-              </button>
+      {/* What To Do Now Dashboard */}
+      {showDashboard && (
+        <div style={{ backgroundColor: 'rgba(236,231,213,0.7)', borderBottom: '1px dashed #ccc' }}>
+          <div className="max-w-6xl mx-auto" style={{ paddingLeft: '48px', paddingRight: '48px', paddingTop: '12px', paddingBottom: '12px' }}>
+            <button onClick={() => setShowDashboard(!showDashboard)}
+              className="flex items-center gap-2 mb-2" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#333', letterSpacing: '2px', textTransform: 'uppercase' }}>
+              <ChevronUp size={12} /> What To Do Now
+            </button>
               {(() => {
                 const di = dashboardItems;
                 const hasItems = di.indoors.length > 0 || di.transplant.length > 0 || di.directSow.length > 0 || di.blooming.length > 0;
@@ -1424,10 +1421,21 @@ function PlantingCalendar() {
             </div>
           </div>
         )}
+      {!showDashboard && (
+        <div style={{ borderBottom: '1px dashed #ccc' }}>
+          <div className="max-w-6xl mx-auto" style={{ paddingLeft: '48px', paddingRight: '48px', paddingTop: '8px', paddingBottom: '8px' }}>
+            <button onClick={() => setShowDashboard(true)}
+              className="flex items-center gap-2" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#999', letterSpacing: '2px', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '10px' }}>&#x25B6;</span> What To Do Now
+            </button>
+          </div>
+        </div>
+      )}
 
-                {viewMode === 'gantt' ? (
-          <div className="max-w-6xl mx-auto py-5" style={{ paddingLeft: '48px', paddingRight: '48px' }}>
-            <div style={{ backgroundColor: '#f5f0e0', border: '1px solid #ccc', padding: '20px' }}>
+      {/* Species list */}
+      <div className="max-w-6xl mx-auto py-5" style={{ paddingLeft: '48px', paddingRight: '48px' }}>
+        {viewMode === 'gantt' ? (
+          <div style={{ backgroundColor: '#f5f0e0', border: '1px solid #ccc', padding: '20px' }}>
               <h3 style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px', color: '#333' }}>Bloom Calendar</h3>
               {/* Month labels */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -1492,9 +1500,10 @@ function PlantingCalendar() {
                   </div>
                 );
               })()}
-            </div>
           </div>
-        ) : (sortedFiltered.map(sd => (
+        ) : (
+          <div className="space-y-2">
+            {sortedFiltered.map(sd => (
             <div key={sd.species} className="species-card overflow-hidden" style={{ border: '1px solid #ccc', backgroundColor: '#f5f0e0' }}>
               {/* Species header row */}
               <button onClick={() => toggleSpecies(sd.species)}
@@ -1612,8 +1621,9 @@ function PlantingCalendar() {
                 </div>
               )}
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {filtered.length === 0 && (
           <div className="p-16 text-center" style={{ border: '1px solid #ccc', backgroundColor: '#f5f0e0', color: '#aaa' }}>
