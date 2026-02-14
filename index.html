@@ -1364,10 +1364,15 @@ function PlantingCalendar() {
               style={bloomColorMode ? { backgroundColor: '#333', color: '#f5f0e0' } : { backgroundColor: '#f5f0e0', color: '#999', border: '1px solid #ccc' }}>
               Color
             </button>
-            <button onClick={() => setViewMode(viewMode === 'list' ? 'gantt' : 'list')}
+            <button onClick={() => setViewMode(viewMode === 'gantt' ? 'list' : 'gantt')}
               className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
               style={viewMode === 'gantt' ? { backgroundColor: '#333', color: '#f5f0e0' } : { backgroundColor: '#f5f0e0', color: '#999', border: '1px solid #ccc' }}>
-              {viewMode === 'list' ? 'Bloom Chart' : 'List View'}
+              Bloom Chart
+            </button>
+            <button onClick={() => setViewMode(viewMode === 'planting' ? 'list' : 'planting')}
+              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+              style={viewMode === 'planting' ? { backgroundColor: '#333', color: '#f5f0e0' } : { backgroundColor: '#f5f0e0', color: '#999', border: '1px solid #ccc' }}>
+              Planting Chart
             </button>
           </div>
         </div>
@@ -1524,6 +1529,59 @@ function PlantingCalendar() {
                 );
               })()}
           </div>
+        ) : viewMode === 'planting' ? (
+          <div style={{ backgroundColor: '#f5f0e0', border: '1px solid #ccc', padding: '20px' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px', color: '#333' }}>Planting Calendar</h3>
+            {/* Month labels */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ width: '140px', flexShrink: 0 }}></span>
+              <div className="relative flex-1" style={{ height: '14px' }}>
+                {MONTHS.map((m, mi) => {
+                  const left = (MONTH_START_DOY[mi] / 365) * 100;
+                  const width = (MONTH_DAYS[mi] / 365) * 100;
+                  return <span key={m} className="absolute text-center" style={{ left: left + '%', width: width + '%', fontSize: '9px', fontWeight: 400, color: '#999', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{m}</span>;
+                })}
+              </div>
+            </div>
+            {/* Gantt rows */}
+            <div className="space-y-1">
+              {sortedFiltered.slice().sort((a, b) => {
+                const aStart = a.tl.indoorStart || a.tl.sowStart || 999;
+                const bStart = b.tl.indoorStart || b.tl.sowStart || 999;
+                return aStart - bStart;
+              }).map(sd => {
+                const tl = sd.tl;
+                const phases = [];
+                if (tl.indoorStart && tl.indoorEnd) phases.push({ start: tl.indoorStart, end: tl.indoorEnd, color: PHASE_COLORS.indoor.bg, label: 'Indoor' });
+                if (tl.transplant) phases.push({ start: tl.transplant - 3, end: tl.transplant + 3, color: PHASE_COLORS.transplant.bg, label: 'Transplant' });
+                if (tl.sowStart && tl.sowEnd) phases.push({ start: tl.sowStart, end: tl.sowEnd, color: PHASE_COLORS.sow.bg, label: 'Direct Sow' });
+                if (tl.germStart && tl.germEnd) phases.push({ start: tl.germStart, end: tl.germEnd, color: PHASE_COLORS.germination.bg, label: 'Germination' });
+                return (
+                  <div key={sd.species} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="truncate" style={{ width: '140px', flexShrink: 0, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#555' }}>{sd.species}</span>
+                    <div style={{ flex: 1, height: '16px', position: 'relative', backgroundColor: '#ece7d5', border: '1px solid #ddd' }}>
+                      {MONTH_START_DOY.slice(1).map((md, i) => (
+                        <div key={i} className="absolute top-0 bottom-0" style={{ left: (md / 365 * 100) + '%', width: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
+                      ))}
+                      {phases.map((p, pi) => (
+                        <div key={pi} title={p.label + ': ' + formatDoy(p.start) + ' – ' + formatDoy(p.end)}
+                          style={{ position: 'absolute', left: ((p.start - 1) / 365 * 100) + '%', width: Math.max(((p.end - p.start) / 365 * 100), 0.5) + '%', height: '100%', backgroundColor: p.color, top: 0 }} />
+                      ))}
+                      <div className="absolute" style={{ left: 'calc(' + todayPct + '% - 1px)', top: '-1px', bottom: '-1px', width: '2px', backgroundColor: '#c00', zIndex: 2 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Legend */}
+            <div className="flex gap-4 mt-4" style={{ fontSize: '10px', color: '#777' }}>
+              <span className="flex items-center gap-1"><span style={{ display: 'inline-block', width: '10px', height: '10px', backgroundColor: PHASE_COLORS.indoor.bg }} /> Indoor Start</span>
+              <span className="flex items-center gap-1"><span style={{ display: 'inline-block', width: '10px', height: '10px', backgroundColor: PHASE_COLORS.transplant.bg }} /> Transplant</span>
+              <span className="flex items-center gap-1"><span style={{ display: 'inline-block', width: '10px', height: '10px', backgroundColor: PHASE_COLORS.sow.bg }} /> Direct Sow</span>
+              <span className="flex items-center gap-1"><span style={{ display: 'inline-block', width: '10px', height: '10px', backgroundColor: PHASE_COLORS.germination.bg }} /> Germination</span>
+              <span className="flex items-center gap-1"><span style={{ display: 'inline-block', width: '2px', height: '10px', backgroundColor: '#c00' }} /> Today</span>
+            </div>
+          </div>
         ) : (
           <div className="space-y-2">
             {sortedFiltered.map(sd => (
@@ -1613,33 +1671,34 @@ function PlantingCalendar() {
               {/* Expanded: variety card grid */}
               {expandedSpecies[sd.species] && (
                 <div style={{ borderTop: '1px dashed #ccc', backgroundColor: '#ece7d5' }} className="px-5 py-4">
-                  <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))        )}' }}>
-                    {sd.varieties.map((v, i) => (
+                  <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}>
+                    {sd.varieties.map((v, i) => {
+                      const inGarden = myGarden[sd.species + '||' + v.name];
+                      return (
                       <div key={i}
                         onClick={() => setSelectedVariety({ ...v, species: sd.species, type: sd.type, germination: sd.germination, bloomDays: sd.bloomDays || [60,90], frostHardy: sd.frostHardy, sowMethod: sd.sowMethod, sowTiming: sd.sowTiming, sun: sd.sun, bloomColor: sd.bloomColor, height: sd.height, flag: sd.flag, zoneRange: sd.zoneRange, tl: sd.tl })}
                         className="variety-chip cursor-pointer overflow-hidden relative"
-                        style={{ border: myGarden[sd.species + '||' + v.name] ? '2px solid #999' : '1px solid #ccc', backgroundColor: '#f5f0e0' }}>
-                        {/* Star toggle */}
+                        style={{ border: inGarden ? '2px solid #999' : '1px solid #ccc', backgroundColor: '#f5f0e0' }}>
                         <button onClick={(e) => toggleGarden(sd.species, v.name, e)}
-                          className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center"
-                          style={{ backgroundColor: 'rgba(245,240,224,0.85)', border: '1px solid #ccc', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}>
-                          {myGarden[sd.species + '||' + v.name] ? '★' : '☆'}
+                          className="absolute z-10 flex items-center justify-center"
+                          style={{ top: '4px', right: '4px', width: '22px', height: '22px', backgroundColor: 'rgba(245,240,224,0.85)', border: '1px solid #ccc', fontSize: '11px', cursor: 'pointer', lineHeight: 1 }}>
+                          {inGarden ? '★' : '☆'}
                         </button>
                         {v.img ? (
                           <img src={v.img} alt={v.name}
-                            style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }}
+                            style={{ width: '100%', height: '100px', objectFit: 'cover', display: 'block' }}
                             loading="lazy" onError={(e) => { e.target.style.display='none'; }} />
                         ) : (
-                          <div className="flex items-center justify-center" style={{ width: '100%', height: '220px', backgroundColor: '#ece7d5' }}>
-                            <span style={{ fontSize: '48px', color: '#ccc' }}>&#10047;</span>
+                          <div className="flex items-center justify-center" style={{ width: '100%', height: '100px', backgroundColor: '#ece7d5' }}>
+                            <span style={{ fontSize: '28px', color: '#ccc' }}>&#10047;</span>
                           </div>
                         )}
-                        <div style={{ padding: '10px 14px 12px' }}>
-                          <p className="font-bold truncate" style={{ fontSize: '12px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{v.name}</p>
-                          <p className="flex items-center gap-1 mt-1" style={{ fontSize: '10px', color: '#999' }}>View details <ExternalLink size={10} /></p>
+                        <div style={{ padding: '6px 8px 7px' }}>
+                          <p className="font-bold truncate" style={{ fontSize: '10px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{v.name}</p>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
