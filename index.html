@@ -23,6 +23,9 @@
       .variety-chip { transition: all 0.15s ease; border-radius: 6px; }
       .variety-chip:hover { background-color: #f1f5f9 !important; }
       .filter-btn { transition: all 0.15s ease; border-radius: 4px; }
+      .segment-group { display: inline-flex; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+      .segment-group button { border-radius: 0; border: none; margin: 0; }
+      .segment-group button:not(:last-child) { border-right: 1px solid #e2e8f0; }
       .modal-enter { animation: modalIn 0.2s ease-out; }
       @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
       .backdrop-enter { animation: fadeIn 0.15s ease-out; }
@@ -1042,12 +1045,20 @@ function PlantingCalendar() {
   const [bloomColorMode, setBloomColorMode] = useState(false);
   const [sortBy, setSortBy] = useState('alpha');
   const [filterHeight, setFilterHeight] = useState('all');
-  const [showDashboard, setShowDashboard] = useState(true);
   const [viewMode, setViewMode] = useState('list');
+  const [allExpanded, setAllExpanded] = useState(false);
 
   React.useEffect(() => {
     localStorage.setItem('myGarden', JSON.stringify(myGarden));
   }, [myGarden]);
+
+  React.useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') setSelectedVariety(null); };
+    if (selectedVariety) {
+      document.addEventListener('keydown', handleEsc);
+      return () => document.removeEventListener('keydown', handleEsc);
+    }
+  }, [selectedVariety]);
 
   const toggleGarden = useCallback((species, varietyName, e) => {
     if (e) { e.stopPropagation(); e.preventDefault(); }
@@ -1194,6 +1205,18 @@ function PlantingCalendar() {
     setExpandedSpecies(prev => ({ ...prev, [sp]: !prev[sp] }));
   }, []);
 
+  const toggleAllSpecies = useCallback(() => {
+    if (allExpanded) {
+      setExpandedSpecies({});
+      setAllExpanded(false);
+    } else {
+      const all = {};
+      sortedFiltered.forEach(sd => { all[sd.species] = true; });
+      setExpandedSpecies(all);
+      setAllExpanded(true);
+    }
+  }, [allExpanded, sortedFiltered]);
+
   // Full-year timeline bar with month gridlines
   const YearBar = ({ tl, height = 20, showGridlines = true, bloomColor = null }) => {
     const segments = [];
@@ -1283,18 +1306,34 @@ function PlantingCalendar() {
               <h1 className="font-bold" style={{ fontSize: '20px', letterSpacing: '4px', textTransform: 'uppercase', color: '#1e293b' }}>MIDCOAST MAINE</h1>
               <p style={{ fontWeight: 400, color: '#475569', letterSpacing: '3px', fontSize: '11px', textTransform: 'uppercase' }}>Planting Calendar</p>
               <p className="mt-1" style={{ fontWeight: 400, color: '#94a3b8', letterSpacing: '1px', fontSize: '11px' }}>Zone 5b · Last frost May 15 · First frost Oct 1 · {totalVarieties} varieties, {filtered.length} species</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {Object.entries(PHASE_COLORS).filter(([k]) => k !== 'dormant').map(([key, val]) => (
-                <span key={key} className="flex items-center gap-1.5 text-xs" style={{ color: '#64748b' }}>
-                  <span className="inline-block w-2 h-2" style={{ backgroundColor: val.bg }} />
-                  {val.label}
-                </span>
-              ))}
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: '#64748b' }}>
-                <span className="inline-block w-2 h-2" style={{ backgroundColor: '#c00' }} />
-                Today
-              </span>
+              {/* Dashboard summary line */}
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1" style={{ fontSize: '11px' }}>
+                {dashboardItems.indoors.length > 0 && (
+                  <span style={{ color: '#7c3aed' }}>
+                    <strong>Start indoors:</strong> {dashboardItems.indoors.map(i => i.species).join(', ')}
+                  </span>
+                )}
+                {dashboardItems.transplant.length > 0 && (
+                  <span style={{ color: '#2563eb' }}>
+                    <strong>Transplant:</strong> {dashboardItems.transplant.map(i => i.species).join(', ')}
+                  </span>
+                )}
+                {dashboardItems.directSow.length > 0 && (
+                  <span style={{ color: '#16a34a' }}>
+                    <strong>Direct sow:</strong> {dashboardItems.directSow.map(i => i.species).join(', ')}
+                  </span>
+                )}
+                {dashboardItems.blooming.length > 0 && (
+                  <span style={{ color: '#ec4899' }}>
+                    <strong>Blooming:</strong> {dashboardItems.blooming.map(i => i.species).join(', ')}
+                  </span>
+                )}
+                {dashboardItems.indoors.length === 0 && dashboardItems.transplant.length === 0 && dashboardItems.directSow.length === 0 && dashboardItems.blooming.length === 0 && dashboardItems.nextUp && (
+                  <span style={{ color: '#64748b' }}>
+                    Next: <strong>{dashboardItems.nextUp.label}</strong> ({dashboardItems.nextUp.daysAway}d)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1302,159 +1341,116 @@ function PlantingCalendar() {
 
       {/* Sticky toolbar */}
       <div className="sticky top-0 z-20" style={{ backgroundColor: 'rgba(255,255,255,0.97)', borderBottom: '1px solid #e2e8f0' }}>
-      <div className="max-w-6xl mx-auto" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
-        <div className="flex flex-col sm:flex-row gap-2.5 py-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#94a3b8' }} />
-            <input type="text" placeholder="Search species or varieties..." value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm transition-all" style={{ fontWeight: 400, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b' }} />
+        <div className="max-w-6xl mx-auto" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+          <div className="flex flex-col sm:flex-row gap-3 py-3 flex-wrap items-center">
+            {/* GROUP A: Filters (Search + dropdowns) */}
+            <div className="flex gap-2 flex-wrap items-center flex-1 min-w-0">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#94a3b8' }} />
+                <input type="text" placeholder="Search species or varieties..." value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 text-sm transition-all" style={{ fontWeight: 400, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '6px' }} />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
+                    style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#e2e8f0', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#64748b', lineHeight: 1 }}>
+                    ×
+                  </button>
+                )}
+              </div>
+              <select value={filterSow} onChange={e => setFilterSow(e.target.value)}
+                className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
+                <option value="all">All methods</option>
+                <option value="indoor">Indoor start</option>
+                <option value="direct">Direct sow</option>
+              </select>
+              <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
+                <option value="all">All types</option>
+                <option value="annual">Annual</option>
+                <option value="perennial">Perennial</option>
+              </select>
+              <select value={filterHeight} onChange={e => setFilterHeight(e.target.value)}
+                className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
+                <option value="all">All heights</option>
+                <option value="ground">Ground (0-6")</option>
+                <option value="short">Short (6-18")</option>
+                <option value="medium">Medium (18-36")</option>
+                <option value="tall">Tall (36-60")</option>
+                <option value="vine">Vine</option>
+              </select>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
+                <option value="alpha">Sort: A-Z</option>
+                <option value="sowDate">Sort: Sow date</option>
+                <option value="bloomDate">Sort: Bloom date</option>
+                <option value="varieties">Sort: Most varieties</option>
+                <option value="type">Sort: Type</option>
+              </select>
+            </div>
+
+            {/* Separator */}
+            <div style={{ width: '1px', height: '28px', backgroundColor: '#e2e8f0' }} />
+
+            {/* GROUP B: Quick Filters */}
+            <div className="flex gap-2 flex-wrap items-center">
+              <button onClick={() => setFilterPlantNow(!filterPlantNow)}
+                className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                style={filterPlantNow ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                Plant Now
+              </button>
+              <button onClick={() => setFilterBloomNow(!filterBloomNow)}
+                className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                style={filterBloomNow ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                Blooming
+              </button>
+              <button onClick={() => setFilterMyGarden(!filterMyGarden)}
+                className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                style={filterMyGarden ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                My Garden{Object.keys(myGarden).length > 0 ? ` (${Object.keys(myGarden).length})` : ''}
+              </button>
+            </div>
+
+            {/* Separator */}
+            <div style={{ width: '1px', height: '28px', backgroundColor: '#e2e8f0' }} />
+
+            {/* GROUP C: Display */}
+            <div className="flex gap-2 flex-wrap items-center">
+              <button onClick={() => setBloomColorMode(!bloomColorMode)}
+                className="filter-btn px-3 py-1.5 text-sm font-bold whitespace-nowrap"
+                style={bloomColorMode ? { backgroundColor: '#ec4899', color: '#fff', borderRadius: '12px', border: 'none', padding: '6px 12px' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '6px 12px' }}>
+                Color
+              </button>
+              <div className="segment-group">
+                <button onClick={() => setViewMode(viewMode === 'gantt' ? 'list' : 'gantt')}
+                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                  style={viewMode === 'gantt' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
+                  Bloom Chart
+                </button>
+                <button onClick={() => setViewMode(viewMode === 'planting' ? 'list' : 'planting')}
+                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                  style={viewMode === 'planting' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
+                  Planting Chart
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <select value={filterSow} onChange={e => setFilterSow(e.target.value)}
-              className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b' }}>
-              <option value="all">All methods</option>
-              <option value="indoor">Indoor start</option>
-              <option value="direct">Direct sow</option>
-            </select>
-            <select value={filterType} onChange={e => setFilterType(e.target.value)}
-              className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b' }}>
-              <option value="all">All types</option>
-              <option value="annual">Annual</option>
-              <option value="perennial">Perennial</option>
-            </select>
-            <select value={filterHeight} onChange={e => setFilterHeight(e.target.value)}
-              className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b' }}>
-              <option value="all">All heights</option>
-              <option value="ground">Ground (0-6")</option>
-              <option value="short">Short (6-18")</option>
-              <option value="medium">Medium (18-36")</option>
-              <option value="tall">Tall (36-60")</option>
-              <option value="vine">Vine</option>
-            </select>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-              className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b' }}>
-              <option value="alpha">Sort: A-Z</option>
-              <option value="sowDate">Sort: Sow date</option>
-              <option value="bloomDate">Sort: Bloom date</option>
-              <option value="varieties">Sort: Most varieties</option>
-              <option value="type">Sort: Type</option>
-            </select>
-            <button onClick={() => setFilterPlantNow(!filterPlantNow)}
-              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-              style={filterPlantNow ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-              Plant Now
-            </button>
-            <button onClick={() => setFilterBloomNow(!filterBloomNow)}
-              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-              style={filterBloomNow ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-              Blooming
-            </button>
-            <button onClick={() => setFilterMyGarden(!filterMyGarden)}
-              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-              style={filterMyGarden ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-              My Garden{Object.keys(myGarden).length > 0 ? ` (${Object.keys(myGarden).length})` : ''}
-            </button>
-            <button onClick={() => setBloomColorMode(!bloomColorMode)}
-              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-              style={bloomColorMode ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-              Color
-            </button>
-            <button onClick={() => setViewMode(viewMode === 'gantt' ? 'list' : 'gantt')}
-              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-              style={viewMode === 'gantt' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-              Bloom Chart
-            </button>
-            <button onClick={() => setViewMode(viewMode === 'planting' ? 'list' : 'planting')}
-              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-              style={viewMode === 'planting' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-              Planting Chart
-            </button>
+
+          {/* Phase legend row */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-2" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+            {Object.entries(PHASE_COLORS).filter(([k]) => k !== 'dormant').map(([key, val]) => (
+              <span key={key} className="flex items-center gap-1" style={{ fontSize: '10px', color: '#64748b' }}>
+                <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: val.bg }} />
+                {val.label}
+              </span>
+            ))}
+            <span className="flex items-center gap-1" style={{ fontSize: '10px', color: '#64748b' }}>
+              <span className="inline-block w-2 h-0.5" style={{ backgroundColor: '#c00' }} />
+              Today
+            </span>
           </div>
         </div>
       </div>
-    </div>
-
-      {/* What To Do Now Dashboard */}
-      {showDashboard && (
-        <div style={{ backgroundColor: 'rgba(241,245,249,0.8)', borderBottom: '1px solid #e2e8f0' }}>
-          <div className="max-w-6xl mx-auto" style={{ paddingLeft: '20px', paddingRight: '20px', paddingTop: '12px', paddingBottom: '12px' }}>
-            <button onClick={() => setShowDashboard(!showDashboard)}
-              className="flex items-center gap-2 mb-2" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#1e293b', letterSpacing: '2px', textTransform: 'uppercase' }}>
-              <ChevronUp size={12} /> What To Do Now
-            </button>
-              {(() => {
-                const di = dashboardItems;
-                const hasItems = di.indoors.length > 0 || di.transplant.length > 0 || di.directSow.length > 0 || di.blooming.length > 0;
-                if (!hasItems) {
-                  return (
-                    <div style={{ fontSize: '12px', color: '#64748b', padding: '8px 0' }}>
-                      {di.nextUp ? (
-                        <span>Next activity: <strong>{di.nextUp.label}</strong> ({di.nextUp.daysAway} days away)</span>
-                      ) : (
-                        <span>No planting activities in the next 2 weeks.</span>
-                      )}
-                    </div>
-                  );
-                }
-                return (
-                  <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                    {di.indoors.length > 0 && (
-                      <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', padding: '10px 12px', borderRadius: '6px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: PHASE_COLORS.indoor.bg, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Start Indoors</p>
-                        {di.indoors.map((item, i) => (
-                          <p key={i} style={{ fontSize: '11px', color: '#475569', marginBottom: '2px' }}>
-                            <strong style={{ color: '#1e293b' }}>{item.species}</strong> <span style={{ color: '#94a3b8' }}>({item.varCount})</span> {item.active ? '' : <span style={{ color: '#94a3b8' }}>starts {item.date}</span>}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {di.transplant.length > 0 && (
-                      <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', padding: '10px 12px', borderRadius: '6px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: PHASE_COLORS.transplant.bg, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Transplant</p>
-                        {di.transplant.map((item, i) => (
-                          <p key={i} style={{ fontSize: '11px', color: '#475569', marginBottom: '2px' }}>
-                            <strong style={{ color: '#1e293b' }}>{item.species}</strong> <span style={{ color: '#94a3b8' }}>({item.varCount})</span> {item.date}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {di.directSow.length > 0 && (
-                      <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', padding: '10px 12px', borderRadius: '6px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: PHASE_COLORS.sow.bg, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Direct Sow</p>
-                        {di.directSow.map((item, i) => (
-                          <p key={i} style={{ fontSize: '11px', color: '#475569', marginBottom: '2px' }}>
-                            <strong style={{ color: '#1e293b' }}>{item.species}</strong> <span style={{ color: '#94a3b8' }}>({item.varCount})</span> {item.upcoming ? <span style={{ color: '#94a3b8' }}>starts {item.date}</span> : ''}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {di.blooming.length > 0 && (
-                      <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', padding: '10px 12px', borderRadius: '6px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: PHASE_COLORS.bloom.bg, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Blooming Now</p>
-                        {di.blooming.map((item, i) => (
-                          <p key={i} style={{ fontSize: '11px', color: '#475569', marginBottom: '2px' }}>
-                            <strong style={{ color: '#1e293b' }}>{item.species}</strong> <span style={{ color: '#94a3b8' }}>({item.varCount})</span>
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-      {!showDashboard && (
-        <div style={{ borderBottom: '1px solid #e2e8f0' }}>
-          <div className="max-w-6xl mx-auto" style={{ paddingLeft: '20px', paddingRight: '20px', paddingTop: '8px', paddingBottom: '8px' }}>
-            <button onClick={() => setShowDashboard(true)}
-              className="flex items-center gap-2" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#94a3b8', letterSpacing: '2px', textTransform: 'uppercase' }}>
-              <span style={{ fontSize: '10px' }}>&#x25B6;</span> What To Do Now
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Species list */}
       <div className="max-w-6xl mx-auto py-5" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
@@ -1580,6 +1576,34 @@ function PlantingCalendar() {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Expand/Collapse all and info line */}
+            <div className="flex justify-between items-center mb-3">
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>{sortedFiltered.length} species · {totalVarieties} varieties</span>
+              <button onClick={toggleAllSpecies} style={{ fontSize: '11px', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                {allExpanded ? 'Collapse all' : 'Expand all'}
+              </button>
+            </div>
+
+            {/* My Garden summary banner */}
+            {filterMyGarden && Object.keys(myGarden).length > 0 && (
+              <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px 20px', marginBottom: '12px' }}>
+                <div className="flex flex-wrap gap-x-6 gap-y-1" style={{ fontSize: '12px', color: '#475569' }}>
+                  <span><strong style={{ color: '#1e293b' }}>{Object.keys(myGarden).length}</strong> varieties across <strong style={{ color: '#1e293b' }}>{sortedFiltered.length}</strong> species</span>
+                  {sortedFiltered.length > 0 && (() => {
+                    const starts = sortedFiltered.map(s => s.tl.indoorStart || s.tl.sowStart).filter(Boolean);
+                    const blooms = sortedFiltered.map(s => s.tl.bloomEnd).filter(Boolean);
+                    if (starts.length === 0) return null;
+                    return (
+                      <>
+                        <span>First planting: <strong style={{ color: '#1e293b' }}>{formatDoy(Math.min(...starts))}</strong></span>
+                        <span>Bloom season: <strong style={{ color: '#1e293b' }}>{formatDoy(Math.min(...sortedFiltered.map(s => s.tl.bloomStart)))} – {formatDoy(Math.max(...blooms))}</strong></span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
             {sortedFiltered.map(sd => (
             <div key={sd.species} className="species-card overflow-hidden" style={{ border: '1px solid #e2e8f0', backgroundColor: '#fff', borderRadius: '8px' }}>
               {/* Species header row */}
@@ -1592,11 +1616,11 @@ function PlantingCalendar() {
                     const pick = withImg.length > 1 ? withImg[1] : withImg[0];
                     return pick ? (
                       <img src={pick.img} alt={sd.species} className="shrink-0"
-                        style={{ width: '160px', height: '160px', objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                        style={{ width: '80px', height: '80px', objectFit: 'cover', border: '1px solid #e2e8f0' }}
                         loading="lazy" onError={(e) => { e.target.style.display='none'; }} />
                     ) : (
-                      <div className="shrink-0 flex items-center justify-center" style={{ width: '160px', height: '160px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0' }}>
-                        <span style={{ fontSize: '48px', color: '#cbd5e1' }}>&#10047;</span>
+                      <div className="shrink-0 flex items-center justify-center" style={{ width: '80px', height: '80px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '24px', color: '#cbd5e1' }}>&#10047;</span>
                       </div>
                     );
                   })()}
@@ -1673,9 +1697,13 @@ function PlantingCalendar() {
                       return (
                       <div key={i}
                         onClick={() => setSelectedVariety({ ...v, species: sd.species, type: sd.type, germination: sd.germination, bloomDays: sd.bloomDays || [60,90], frostHardy: sd.frostHardy, sowMethod: sd.sowMethod, sowTiming: sd.sowTiming, sun: sd.sun, bloomColor: sd.bloomColor, height: sd.height, flag: sd.flag, zoneRange: sd.zoneRange, tl: sd.tl })}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedVariety({ ...v, species: sd.species, type: sd.type, germination: sd.germination, bloomDays: sd.bloomDays || [60,90], frostHardy: sd.frostHardy, sowMethod: sd.sowMethod, sowTiming: sd.sowTiming, sun: sd.sun, bloomColor: sd.bloomColor, height: sd.height, flag: sd.flag, zoneRange: sd.zoneRange, tl: sd.tl }); }}}
+                        tabIndex={0}
+                        role="button"
                         className="variety-chip cursor-pointer overflow-hidden relative"
                         style={{ border: inGarden ? '2px solid #6366f1' : '1px solid #e2e8f0', backgroundColor: '#fff' }}>
                         <button onClick={(e) => toggleGarden(sd.species, v.name, e)}
+                          aria-label={inGarden ? 'Remove from garden' : 'Add to garden'}
                           className="absolute z-10 flex items-center justify-center"
                           style={{ top: '4px', right: '4px', width: '22px', height: '22px', backgroundColor: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', fontSize: '11px', cursor: 'pointer', lineHeight: 1 }}>
                           {inGarden ? '★' : '☆'}
