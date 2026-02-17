@@ -3,6 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive planting calendar for Midcoast Maine (Zone 5b). 147 flower varieties with timelines, bloom dates, and garden planning tools.">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta property="og:title" content="Midcoast Maine Planting Calendar">
+    <meta property="og:description" content="Plan your flower garden with 147 heirloom varieties. Interactive timelines, bloom charts, and My Garden planning for Zone 5b.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
     <title>Midcoast Maine Planting Calendar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +34,9 @@
       .species-name-btn:hover { background-color: #f1f5f9; }
       .variety-chip { transition: all 0.15s ease; border-radius: 6px; }
       .variety-chip:hover { background-color: #f1f5f9 !important; }
-      .filter-btn { transition: all 0.15s ease; border-radius: 4px; }
+      .filter-btn { transition: all 0.15s ease; border-radius: 4px; min-height: 44px; min-width: 44px; }
+      select { min-height: 44px; }
+      .species-name-btn { min-height: 44px; }
       .segment-group { display: inline-flex; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
       .segment-group button { border-radius: 0; border: none; margin: 0; }
       .segment-group button:not(:last-child) { border-right: 1px solid #e2e8f0; }
@@ -1228,6 +1239,7 @@ function PlantingCalendar() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try { return !localStorage.getItem('onboardingDismissed'); } catch { return true; }
   });
+  const [tipIndex, setTipIndex] = useState(0);
   const [showZipInput, setShowZipInput] = useState(false);
   const [zipCode, setZipCode] = useState('');
   const [zipResult, setZipResult] = useState(null);
@@ -1826,7 +1838,7 @@ function PlantingCalendar() {
     <div className="min-h-screen" style={{ backgroundColor: dm.bg }}>
       {/* Header */}
       <div style={{ borderBottom: '2px solid #334155', backgroundColor: dm.headerBg }}>
-        <div className="max-w-6xl mx-auto px-5 py-5" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+        <div className="max-w-6xl mx-auto px-5 py-3" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h1 className="font-bold" style={{ fontSize: '20px', letterSpacing: '4px', textTransform: 'uppercase', color: '#fff' }}>MIDCOAST MAINE</h1>
@@ -1835,21 +1847,21 @@ function PlantingCalendar() {
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1" style={{ fontSize: '11px' }}>
                 <div className="flex items-center gap-2">
                   <span style={{ color: '#94a3b8' }}>Last frost:</span>
-                  <button onClick={() => setLastFrostOffset(f => f - 1)} title="Shift last frost date earlier by 1 week" style={{ width: '20px', height: '20px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '12px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <button onClick={() => setLastFrostOffset(f => f - 1)} title="Shift last frost date earlier by 1 week" style={{ width: '32px', height: '32px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '14px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                   <span style={{ color: lastFrostOffset === 0 ? '#94a3b8' : '#e2e8f0', fontWeight: lastFrostOffset !== 0 ? 700 : 400, minWidth: '50px', textAlign: 'center' }}>
                     {formatDoy(customMidcoast.lastFrost)}
                   </span>
-                  <button onClick={() => setLastFrostOffset(f => f + 1)} title="Shift last frost date later by 1 week" style={{ width: '20px', height: '20px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '12px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  <button onClick={() => setLastFrostOffset(f => f + 1)} title="Shift last frost date later by 1 week" style={{ width: '32px', height: '32px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '14px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                   {lastFrostOffset !== 0 && <span style={{ color: '#94a3b8', fontSize: '10px' }}>({lastFrostOffset > 0 ? '+' : ''}{lastFrostOffset}w)</span>}
                   <button onClick={() => setShowZipInput(!showZipInput)} title="Look up frost dates by ZIP code" style={{ fontSize: '12px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', borderRadius: '4px', padding: '2px 6px', marginLeft: '8px' }}>📍</button>
                 </div>
                 <div className="flex items-center gap-2">
                   <span style={{ color: '#94a3b8' }}>First frost:</span>
-                  <button onClick={() => setFirstFrostOffset(f => f - 1)} title="Shift first frost date earlier by 1 week" style={{ width: '20px', height: '20px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '12px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <button onClick={() => setFirstFrostOffset(f => f - 1)} title="Shift first frost date earlier by 1 week" style={{ width: '32px', height: '32px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '14px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                   <span style={{ color: firstFrostOffset === 0 ? '#94a3b8' : '#e2e8f0', fontWeight: firstFrostOffset !== 0 ? 700 : 400, minWidth: '50px', textAlign: 'center' }}>
                     {formatDoy(customMidcoast.firstFrost)}
                   </span>
-                  <button onClick={() => setFirstFrostOffset(f => f + 1)} title="Shift first frost date later by 1 week" style={{ width: '20px', height: '20px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '12px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  <button onClick={() => setFirstFrostOffset(f => f + 1)} title="Shift first frost date later by 1 week" style={{ width: '32px', height: '32px', border: '1px solid #475569', backgroundColor: '#334155', color: '#e2e8f0', cursor: 'pointer', fontSize: '14px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                   {firstFrostOffset !== 0 && <span style={{ color: '#94a3b8', fontSize: '10px' }}>({firstFrostOffset > 0 ? '+' : ''}{firstFrostOffset}w)</span>}
                 </div>
                 {(lastFrostOffset !== 0 || firstFrostOffset !== 0) && (
@@ -1997,19 +2009,24 @@ function PlantingCalendar() {
         </div>
       </div>
 
-      {showOnboarding && (
-        <div className="max-w-6xl mx-auto" style={{ paddingLeft: '20px', paddingRight: '20px', paddingTop: '12px' }}>
-          <div style={{ backgroundColor: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '16px 20px', position: 'relative' }}>
-            <button onClick={dismissOnboarding} className="absolute" style={{ top: '8px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', fontSize: '18px', lineHeight: 1 }}>&times;</button>
-            <p style={{ fontSize: '13px', fontWeight: 700, color: '#4338ca', marginBottom: '8px' }}>Welcome to your Midcoast Maine Planting Calendar</p>
-            <div style={{ fontSize: '12px', color: '#4338ca', lineHeight: 1.6, opacity: 0.85 }}>
-              <p style={{ marginBottom: '4px' }}><strong>1. Browse &amp; star</strong> — Expand any species card, then click ☆ on varieties you want to grow. Your selections save automatically.</p>
-              <p style={{ marginBottom: '4px' }}><strong>2. Plan with My Garden</strong> — Click "My Garden" in the toolbar to see only your starred varieties, with bloom gap analysis and a height layering guide.</p>
-              <p><strong>3. Explore views</strong> — Switch between Bloom Chart, Planting Chart, Weekly, and Overview to see your timeline from different angles.</p>
-            </div>
+      {showOnboarding && (() => {
+        const tips = [
+          { icon: '👆', text: 'Tap any species card to expand it and see varieties, dates, and growing details.' },
+          { icon: '⭐', text: 'Star varieties you want to grow. Click "My Garden" to see only your picks.' },
+          { icon: '📊', text: 'Use Filters to narrow by height, color, deer resistance, and more.' },
+          { icon: '📅', text: 'Try Bloom Chart or Planting Chart views for a timeline perspective.' },
+          { icon: '🔔', text: 'Star varieties, then enable Reminders to get notified before planting dates.' },
+        ];
+        const tip = tips[tipIndex % tips.length];
+        return (
+          <div style={{ backgroundColor: darkMode ? '#1e293b' : '#eef2ff', borderBottom: '1px solid ' + (darkMode ? '#334155' : '#c7d2fe'), padding: '6px 20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px' }}>
+            <span style={{ fontSize: '14px' }}>{tip.icon}</span>
+            <span style={{ color: darkMode ? '#94a3b8' : '#4338ca', flex: 1 }}>{tip.text}</span>
+            <button onClick={() => setTipIndex(i => i + 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: darkMode ? '#64748b' : '#6366f1', fontSize: '11px', fontWeight: 600, padding: '4px 8px', minHeight: '32px' }}>Next tip</button>
+            <button onClick={dismissOnboarding} style={{ background: 'none', border: 'none', cursor: 'pointer', color: darkMode ? '#475569' : '#a5b4fc', fontSize: '14px', lineHeight: 1, padding: '4px 8px', minHeight: '32px' }}>&times;</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Sticky toolbar */}
       <div role="navigation" aria-label="Planting calendar filters" className="sticky top-0 z-20" style={{ backgroundColor: dm.toolbarBg, borderBottom: '2px solid ' + dm.border, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -2027,7 +2044,30 @@ function PlantingCalendar() {
               weekActions.push({ action: 'Direct sow', species: sd.species, phase: 'sow' });
             }
           });
-          if (weekActions.length === 0) return null;
+          if (weekActions.length === 0) {
+            // Off-season: find the nearest upcoming activity across all species
+            let nearestEvent = null;
+            speciesData.forEach(sd => {
+              const tl = sd.tl;
+              const events = [];
+              if (tl.indoorStart && tl.indoorStart > todayDoy) events.push({ doy: tl.indoorStart, label: 'Indoor starting', species: sd.species, phase: 'indoor' });
+              if (tl.sowStart && tl.sowStart > todayDoy) events.push({ doy: tl.sowStart, label: 'Direct sowing', species: sd.species, phase: 'sow' });
+              if (tl.transplant && tl.transplant > todayDoy) events.push({ doy: tl.transplant, label: 'Transplanting', species: sd.species, phase: 'transplant' });
+              events.forEach(ev => {
+                if (!nearestEvent || ev.doy < nearestEvent.doy) nearestEvent = ev;
+              });
+            });
+            if (!nearestEvent) return null;
+            const daysAway = nearestEvent.doy - todayDoy;
+            const weeksAway = Math.ceil(daysAway / 7);
+            return (
+              <div style={{ padding: '8px 20px', backgroundColor: darkMode ? '#1e293b' : '#f8fafc', borderBottom: '1px solid ' + dm.border, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', fontSize: '10px', letterSpacing: '1px' }}>Off season</span>
+                <span style={{ color: dm.textMuted }}>Growing season starts in <strong style={{ color: '#6366f1', fontWeight: 700 }}>{weeksAway} week{weeksAway !== 1 ? 's' : ''}</strong></span>
+                <span style={{ color: dm.textFaint, fontSize: '11px' }}>Next up: {nearestEvent.label} {nearestEvent.species} ({formatDoy(nearestEvent.doy)})</span>
+              </div>
+            );
+          }
           return (
             <div style={{ padding: '6px 20px', backgroundColor: '#eef2ff', borderBottom: '1px solid #c7d2fe', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', fontSize: '10px', letterSpacing: '1px' }}>This week</span>
@@ -2073,11 +2113,17 @@ function PlantingCalendar() {
                   </div>
                 )}
               </div>
-              {/* Filter collapse toggle */}
+              {/* Filter collapse toggle + dark mode - always visible */}
               <button onClick={() => setFiltersOpen(!filtersOpen)}
                 className="filter-btn px-3 py-2 text-sm font-bold"
-                style={{ backgroundColor: filtersOpen ? '#1e293b' : '#fff', color: filtersOpen ? '#fff' : '#64748b', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                style={{ backgroundColor: filtersOpen ? '#1e293b' : '#fff', color: filtersOpen ? '#fff' : '#64748b', border: '1px solid #e2e8f0', borderRadius: '4px', minHeight: '44px' }}>
                 Filters {filtersOpen ? '▴' : '▾'}
+              </button>
+              <button onClick={() => setDarkMode(!darkMode)}
+                title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="filter-btn text-sm"
+                style={{ backgroundColor: darkMode ? '#334155' : '#fff', color: darkMode ? '#f1f5f9' : '#94a3b8', border: '1px solid ' + (darkMode ? '#475569' : '#e2e8f0'), borderRadius: '4px', fontSize: '16px', padding: '8px 12px', minHeight: '44px' }}>
+                {darkMode ? '☀️' : '🌙'}
               </button>
               {/* Dropdowns - collapsible */}
               <div className="flex gap-2 flex-wrap items-center w-full sm:w-auto" style={{ display: filtersOpen ? 'flex' : 'none' }}>
@@ -2188,6 +2234,12 @@ function PlantingCalendar() {
                     style={{ backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
                     📅 Calendar
                   </button>
+                  <button onClick={exportCSV}
+                    title="Download your garden plan as a CSV spreadsheet"
+                    className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
+                    style={{ backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
+                    📊 CSV
+                  </button>
                   <button onClick={() => {
                     if (window.confirm('Remove all varieties from My Garden? This cannot be undone.')) {
                       setMyGarden({});
@@ -2266,12 +2318,6 @@ function PlantingCalendar() {
                 className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
                 style={{ backgroundColor: compareMode ? '#6366f1' : '#fff', color: compareMode ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
                 {compareMode ? '✕ Cancel' : '⚖️ Compare'}
-              </button>
-              <button onClick={() => setDarkMode(!darkMode)}
-                title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
-                style={{ backgroundColor: darkMode ? '#334155' : '#fff', color: darkMode ? '#f1f5f9' : '#94a3b8', border: '1px solid ' + (darkMode ? '#475569' : '#e2e8f0'), borderRadius: '4px', fontSize: '13px' }}>
-                {darkMode ? '☀️' : '🌙'}
               </button>
               </div>
             </div>}
@@ -2798,7 +2844,7 @@ function PlantingCalendar() {
                         ? <ChevronUp size={13} style={{ color: '#fff' }} />
                         : <ChevronDown size={13} style={{ color: '#94a3b8' }} />}
                     </span>
-                    <span className="font-bold truncate" style={{ fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase', color: dm.text }}>{sd.species}</span>
+                    <span className="font-bold truncate" style={{ fontSize: '17px', letterSpacing: '2px', textTransform: 'uppercase', color: dm.text }}>{sd.species}</span>
                     <span className="text-xs tabular-nums" style={{ color: '#94a3b8' }}>
                       {(() => {
                         const selCount = sd.varieties.filter(v => myGarden[sd.species + '||' + v.name]).length;
@@ -2816,8 +2862,18 @@ function PlantingCalendar() {
                   <div className="mb-2">
                     <YearBar tl={sd.tl} height={20} bloomColor={sd.bloomColor} />
                   </div>
-                  {/* Detail rows - not inside button, text is selectable */}
-                  <div style={{ fontSize: '11px', lineHeight: '20px', color: '#64748b' }}>
+                  {/* Compact summary line - visible when collapsed */}
+                  {!expandedSpecies[sd.species] && (
+                    <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: '10px', color: '#94a3b8', paddingBottom: '2px' }}>
+                      <span className="capitalize" style={{ color: '#64748b', fontWeight: 600 }}>{sd.type}</span>
+                      {sd.frostHardy && <span style={{ color: '#64748b' }}>Frost hardy</span>}
+                      <span>{sd.sowMethod.map(m => m === 'startIndoors' ? 'Indoor' : 'Direct sow').join(' + ')}</span>
+                      <span>Bloom {formatDoy(sd.tl.bloomStart)}</span>
+                      {sd.deerResistant && <span>🛡️</span>}
+                    </div>
+                  )}
+                  {/* Detail rows - visible when expanded */}
+                  {expandedSpecies[sd.species] && <div style={{ fontSize: '11px', lineHeight: '20px', color: '#64748b' }}>
                       <div className="flex gap-2">
                         <span style={{ width: '90px', color: '#94a3b8', flexShrink: 0 }}>Type</span>
                         <span className="capitalize font-bold" style={{ color: '#475569' }}>{sd.type}</span>
@@ -2987,8 +3043,9 @@ function PlantingCalendar() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </div>}
                 </div>
+              </div>
 
               {/* Expanded: variety card grid */}
               {expandedSpecies[sd.species] && (
