@@ -19,7 +19,7 @@
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       .species-card { transition: all 0.15s ease; }
-      .species-card-collapsed { border-left: 3px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+      .species-card-collapsed { border-left: 3px solid; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
       .species-card-expanded { border-left: 3px solid #6366f1; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
       .species-name-btn { border-radius: 4px; transition: background-color 0.1s ease; }
       .species-name-btn:hover { background-color: #f1f5f9; }
@@ -1239,6 +1239,7 @@ function PlantingCalendar() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     try { return localStorage.getItem('notificationsEnabled') === '1'; } catch { return false; }
   });
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   React.useEffect(() => {
     localStorage.setItem('myGarden', JSON.stringify(myGarden));
@@ -1815,7 +1816,7 @@ function PlantingCalendar() {
     textMuted: darkMode ? '#94a3b8' : '#64748b',
     textFaint: darkMode ? '#64748b' : '#94a3b8',
     headerBg: darkMode ? '#1e293b' : '#1e293b',
-    toolbarBg: darkMode ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.98)',
+    toolbarBg: darkMode ? 'rgba(30,41,59,0.97)' : 'rgba(241,245,249,0.98)',
     inputBg: darkMode ? '#334155' : '#fff',
     chipBg: darkMode ? '#1e293b' : '#fff',
     altRow: darkMode ? '#1e293b' : '#f8fafc',
@@ -1824,7 +1825,7 @@ function PlantingCalendar() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: dm.bg }}>
       {/* Header */}
-      <div style={{ borderBottom: '2px solid #334155', backgroundColor: dm.headerBg }}>
+      <div role="banner" style={{ borderBottom: '2px solid #334155', backgroundColor: dm.headerBg }}>
         <div className="max-w-6xl mx-auto px-5 py-5" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
@@ -1856,6 +1857,23 @@ function PlantingCalendar() {
                 )}
                 <span style={{ color: '#94a3b8', fontSize: '10px' }}>({Math.round((customMidcoast.firstFrost - customMidcoast.lastFrost) / 7)} week season)</span>
                 <div style={{ width: '100%', marginTop: '6px' }}>
+                  {/* Season status label */}
+                  <div style={{ fontSize: '9px', color: '#94a3b8', marginBottom: '4px', fontWeight: 500 }}>
+                    {(() => {
+                      const now = todayDoy;
+                      const lastFrost = customMidcoast.lastFrost;
+                      const firstFrost = customMidcoast.firstFrost;
+                      if (now < lastFrost) {
+                        const weeksUntil = Math.ceil((lastFrost - now) / 7);
+                        return `Season starts in ${weeksUntil} week${weeksUntil !== 1 ? 's' : ''}`;
+                      } else if (now > firstFrost) {
+                        const weeksAgo = Math.ceil((now - firstFrost) / 7);
+                        return `Season ended ${weeksAgo} week${weeksAgo !== 1 ? 's' : ''} ago`;
+                      } else {
+                        return `Growing season`;
+                      }
+                    })()}
+                  </div>
                   <div style={{ height: '4px', backgroundColor: '#334155', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
                     {/* Growing season fill */}
                     <div style={{
@@ -2011,7 +2029,7 @@ function PlantingCalendar() {
       )}
 
       {/* Sticky toolbar */}
-      <div className="sticky top-0 z-20" style={{ backgroundColor: dm.toolbarBg, borderBottom: '2px solid ' + dm.border, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <div role="navigation" aria-label="Filters and controls" className="sticky top-0 z-20" style={{ backgroundColor: dm.toolbarBg, borderTop: '1px solid rgba(30,41,59,0.1)', borderBottom: '2px solid ' + dm.border, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         {(() => {
           const weekActions = [];
           speciesData.forEach(sd => {
@@ -2041,12 +2059,11 @@ function PlantingCalendar() {
           );
         })()}
         <div className="max-w-6xl mx-auto" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
-          <div className="flex flex-col sm:flex-row gap-3 py-3 flex-wrap items-center">
-            {/* GROUP A: Filters (Search + dropdowns) */}
-            <div>
-              <p className="hidden sm:block" style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '2px' }}>Filter</p>
-              <div className="flex gap-2 flex-wrap items-center flex-1 min-w-0">
-                <div className="relative flex-1 min-w-[200px]">
+          {/* Top row: Always visible controls */}
+          <div className="flex flex-col sm:flex-row gap-3 py-3 items-center flex-wrap">
+            {/* Search - always visible */}
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#94a3b8' }} />
                 <input type="text" placeholder="Search species or varieties..." value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
@@ -2055,6 +2072,7 @@ function PlantingCalendar() {
                   className="w-full pl-9 pr-8 py-2 text-sm transition-all" style={{ fontWeight: 400, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '6px' }} />
                 {searchTerm && (
                   <button onClick={() => setSearchTerm('')}
+                    aria-label="Clear search"
                     className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
                     style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#e2e8f0', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#64748b', lineHeight: 1 }}>
                     ×
@@ -2072,27 +2090,65 @@ function PlantingCalendar() {
                   </div>
                 )}
               </div>
-              {/* Mobile filter toggle - only on small screens */}
-              <button onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-                className="sm:hidden filter-btn px-3 py-2 text-sm font-bold"
-                style={{ backgroundColor: mobileFiltersOpen ? '#1e293b' : '#fff', color: mobileFiltersOpen ? '#fff' : '#64748b', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-                Filters {mobileFiltersOpen ? '▴' : '▾'}
-              </button>
-              {/* Dropdowns - hidden on mobile unless toggled */}
-              <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex gap-2 flex-wrap items-center w-full sm:w-auto`}>
+            </div>
+
+            {/* My Garden - always visible */}
+            <button onClick={() => setFilterMyGarden(!filterMyGarden)}
+              title="Show only your starred varieties"
+              className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+              style={filterMyGarden ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+              My Garden{Object.keys(myGarden).length > 0 ? ` (${Object.keys(myGarden).length})` : ''}
+            </button>
+
+            {/* Expand all - always visible */}
+            <button onClick={toggleAllSpecies} 
+              aria-label={allExpanded ? 'Collapse all species cards' : 'Expand all species cards'}
+              style={{ fontSize: '11px', color: '#64748b', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontWeight: 600 }}>
+              {allExpanded ? 'Collapse all' : 'Expand all'}
+            </button>
+
+            {/* Jump-to dropdown - always visible */}
+            <select onChange={(e) => { if (e.target.value) { setSearchTerm(e.target.value); e.target.value = ''; } }}
+              aria-label="Jump to species"
+              className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
+              <option value="">Jump to...</option>
+              {speciesData.map(sd => (
+                <option key={sd.species} value={sd.species}>{sd.species}</option>
+              ))}
+            </select>
+
+            {/* Filters & Views toggle button */}
+            <button onClick={() => setFiltersOpen(!filtersOpen)}
+              aria-label={filtersOpen ? 'Close filters and views panel' : 'Open filters and views panel'}
+              aria-expanded={filtersOpen}
+              className="filter-btn px-3 py-2 text-sm font-bold whitespace-nowrap"
+              style={{ backgroundColor: filtersOpen ? '#1e293b' : '#fff', color: filtersOpen ? '#fff' : '#64748b', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+              ☰ Filters & Views {filtersOpen ? '▴' : '▾'}
+            </button>
+          </div>
+
+          {/* Collapsible filters and views panel */}
+          {filtersOpen && (
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', marginBottom: '12px' }}>
+              {/* Filter dropdowns */}
+              <p style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '8px' }}>Filters</p>
+              <div className="flex gap-2 flex-wrap items-center mb-4">
                 <select value={filterSow} onChange={e => setFilterSow(e.target.value)}
+                  aria-label="Filter by sow method"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   <option value="all">All methods</option>
                   <option value="indoor">Indoor start</option>
                   <option value="direct">Direct sow</option>
                 </select>
                 <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                  aria-label="Filter by type"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   <option value="all">All types</option>
                   <option value="annual">Annual</option>
                   <option value="perennial">Perennial</option>
                 </select>
                 <select value={filterHeight} onChange={e => setFilterHeight(e.target.value)}
+                  aria-label="Filter by height"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   <option value="all">All heights</option>
                   <option value="ground">Ground (0-6")</option>
@@ -2102,25 +2158,50 @@ function PlantingCalendar() {
                   <option value="vine">Vine</option>
                 </select>
                 <select value={filterColorFamily} onChange={e => setFilterColorFamily(e.target.value)}
+                  aria-label="Filter by color"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   {Object.entries(COLOR_FAMILIES).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
                   ))}
                 </select>
                 <select value={filterDeer} onChange={e => setFilterDeer(e.target.value)}
+                  aria-label="Filter by deer resistance"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   <option value="all">All deer</option>
                   <option value="resistant">Deer resistant</option>
                   <option value="vulnerable">Deer vulnerable</option>
                 </select>
                 <select value={filterPollinator} onChange={e => setFilterPollinator(e.target.value)}
+                  aria-label="Filter by pollinator type"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   <option value="all">All pollinators</option>
                   <option value="bee">Bee friendly</option>
                   <option value="butterfly">Butterfly</option>
                   <option value="hummingbird">Hummingbird</option>
                 </select>
+
+                {/* Status buttons in filter panel */}
+                <button onClick={() => setFilterPlantNow(!filterPlantNow)}
+                  title="Show only species you can plant or start this week"
+                  aria-label={filterPlantNow ? 'Plant Now filter active' : 'Plant Now filter inactive'}
+                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                  style={filterPlantNow ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                  Plant Now
+                </button>
+                <button onClick={() => setFilterBloomNow(!filterBloomNow)}
+                  title="Show only species currently in bloom"
+                  aria-label={filterBloomNow ? 'Blooming filter active' : 'Blooming filter inactive'}
+                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                  style={filterBloomNow ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                  Blooming
+                </button>
+              </div>
+
+              {/* Sort dropdown */}
+              <p style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '8px' }}>Sort</p>
+              <div className="flex gap-2 flex-wrap items-center mb-4">
                 <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                  aria-label="Sort species by"
                   className="px-3 py-2 text-sm cursor-pointer" style={{ fontWeight: 700, backgroundColor: '#fff', border: '1px solid #e2e8f0', color: '#1e293b', borderRadius: '4px' }}>
                   <option value="alpha">Sort: A-Z</option>
                   <option value="sowDate">Sort: Sow date</option>
@@ -2130,151 +2211,136 @@ function PlantingCalendar() {
                   <option value="nextAction">Sort: Next action</option>
                 </select>
               </div>
+
+              {/* View mode buttons */}
+              <p style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '8px' }}>View</p>
+              <div className="flex gap-2 flex-wrap items-center mb-4">
+                <button onClick={() => setBloomColorMode(!bloomColorMode)}
+                  title="Toggle bloom color overlay on timeline bars"
+                  aria-label={bloomColorMode ? 'Color mode on' : 'Color mode off'}
+                  className="filter-btn px-3 py-1.5 text-sm font-bold whitespace-nowrap"
+                  style={bloomColorMode ? { backgroundColor: '#ec4899', color: '#fff', borderRadius: '12px', border: 'none', padding: '6px 12px' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '6px 12px' }}>
+                  Color
+                </button>
+                <div className="segment-group">
+                  <button onClick={() => setViewMode(viewMode === 'overview' ? 'list' : 'overview')}
+                    title="Month-by-month summary of all planting actions"
+                    aria-label="Overview view"
+                    className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                    style={viewMode === 'overview' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
+                    Overview
+                  </button>
+                  <button onClick={() => setViewMode(viewMode === 'gantt' ? 'list' : 'gantt')}
+                    title="See when each species blooms across the year"
+                    aria-label="Bloom Chart view"
+                    className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                    style={viewMode === 'gantt' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
+                    Bloom Chart
+                  </button>
+                  <button onClick={() => setViewMode(viewMode === 'planting' ? 'list' : 'planting')}
+                    title="See indoor start, transplant, and sow windows"
+                    aria-label="Planting Chart view"
+                    className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                    style={viewMode === 'planting' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
+                    Planting Chart
+                  </button>
+                  <button onClick={() => setViewMode(viewMode === 'weekly' ? 'list' : 'weekly')}
+                    title="Tasks organized by calendar week"
+                    aria-label="Weekly view"
+                    className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
+                    style={viewMode === 'weekly' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
+                    Weekly
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Separator */}
-            <div className="hidden sm:block" style={{ width: '1px', height: '28px', backgroundColor: '#e2e8f0' }} />
-
-            {/* GROUP B: Quick Filters */}
-            <div>
-              <p className="hidden sm:block" style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '2px' }}>Status</p>
-              <div className="flex gap-2 flex-wrap items-center">
-              <button onClick={() => setFilterPlantNow(!filterPlantNow)}
-                title="Show only species you can plant or start this week"
-                className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                style={filterPlantNow ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                Plant Now
-              </button>
-              <button onClick={() => setFilterBloomNow(!filterBloomNow)}
-                title="Show only species currently in bloom"
-                className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                style={filterBloomNow ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                Blooming
-              </button>
-              <button onClick={() => setFilterMyGarden(!filterMyGarden)}
-                title="Show only your starred varieties"
-                className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                style={filterMyGarden ? { backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderLeft: '3px solid #16a34a', fontWeight: 700 } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                My Garden{Object.keys(myGarden).length > 0 ? ` (${Object.keys(myGarden).length})` : ''}
-              </button>
-              {Object.keys(myGarden).length > 0 && (
-                <>
-                  <button onClick={copyShoppingList}
-                    title="Copy your garden selections as a shopping list to clipboard"
-                    className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
-                    style={{ backgroundColor: copiedList ? '#16a34a' : '#fff', color: copiedList ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
-                    {copiedList ? '✓ Copied!' : '📋 Copy List'}
-                  </button>
-                  <button onClick={() => {
-                      if (!filterMyGarden) setFilterMyGarden(true);
-                      setTimeout(() => window.print(), 300);
-                    }}
-                    title="Print your garden plan"
-                    className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
-                    style={{ backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
-                    🖨 Print
-                  </button>
-                  <button onClick={notificationsEnabled ? () => { setNotificationsEnabled(false); localStorage.setItem('notificationsEnabled', '0'); } : enableNotifications}
-                    title={notificationsEnabled ? 'Disable planting reminders' : 'Get browser notifications 3 days before planting events'}
-                    className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
-                    style={{ backgroundColor: notificationsEnabled ? '#16a34a' : '#fff', color: notificationsEnabled ? '#fff' : '#94a3b8', border: '1px solid ' + (notificationsEnabled ? '#16a34a' : '#e2e8f0'), borderRadius: '4px', fontSize: '11px' }}>
-                    {notificationsEnabled ? '🔔 On' : '🔔 Remind'}
-                  </button>
-                  <button onClick={downloadICSCalendar}
-                    title="Download calendar events for your garden plan"
-                    className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
-                    style={{ backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
-                    📅 Calendar
-                  </button>
-                  <button onClick={() => {
-                    if (window.confirm('Remove all varieties from My Garden? This cannot be undone.')) {
-                      setMyGarden({});
-                    }
+              {/* Utility buttons */}
+              <p style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '8px' }}>Utilities</p>
+              <div className="flex gap-2 flex-wrap items-center mb-4">
+                <button onClick={() => {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    });
                   }}
-                    title="Remove all varieties from your garden plan"
-                    className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
-                    style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '11px' }}>
-                    ✕ Unstar All
-                  </button>
-                  {hasActiveFilters && (
-                    <button onClick={clearAllFilters}
-                      title="Reset all filters and search to defaults"
-                      className="filter-btn px-2.5 py-2 text-sm whitespace-nowrap"
-                      style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
-                      ✕ Clear all
+                  title="Copy a shareable link with your current filters"
+                  aria-label={copiedLink ? 'Link copied' : 'Copy shareable link'}
+                  className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
+                  style={{ backgroundColor: copiedLink ? '#16a34a' : '#fff', color: copiedLink ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                  {copiedLink ? '✓ Copied!' : '🔗 Share'}
+                </button>
+                <button onClick={() => { setCompareMode(!compareMode); setCompareSpecies([]); }}
+                  title="Select two species to compare side-by-side"
+                  aria-label={compareMode ? 'Compare mode active' : 'Compare mode inactive'}
+                  className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
+                  style={{ backgroundColor: compareMode ? '#6366f1' : '#fff', color: compareMode ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                  {compareMode ? '✕ Cancel' : '⚖️ Compare'}
+                </button>
+                <button onClick={() => setDarkMode(!darkMode)}
+                  title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                  aria-label={darkMode ? 'Dark mode enabled' : 'Dark mode disabled'}
+                  className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
+                  style={{ backgroundColor: darkMode ? '#334155' : '#fff', color: darkMode ? '#f1f5f9' : '#94a3b8', border: '1px solid ' + (darkMode ? '#475569' : '#e2e8f0'), borderRadius: '4px', fontSize: '13px' }}>
+                  {darkMode ? '☀️' : '🌙'}
+                </button>
+                {Object.keys(myGarden).length > 0 && (
+                  <>
+                    <button onClick={copyShoppingList}
+                      title="Copy your garden selections as a shopping list to clipboard"
+                      aria-label={copiedList ? 'Shopping list copied' : 'Copy shopping list'}
+                      className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
+                      style={{ backgroundColor: copiedList ? '#16a34a' : '#fff', color: copiedList ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
+                      {copiedList ? '✓ Copied!' : '📋 Copy List'}
                     </button>
-                  )}
-                </>
-              )}
+                    <button onClick={() => {
+                        if (!filterMyGarden) setFilterMyGarden(true);
+                        setTimeout(() => window.print(), 300);
+                      }}
+                      title="Print your garden plan"
+                      aria-label="Print garden plan"
+                      className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
+                      style={{ backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
+                      🖨 Print
+                    </button>
+                    <button onClick={notificationsEnabled ? () => { setNotificationsEnabled(false); localStorage.setItem('notificationsEnabled', '0'); } : enableNotifications}
+                      title={notificationsEnabled ? 'Disable planting reminders' : 'Get browser notifications 3 days before planting events'}
+                      aria-label={notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled'}
+                      className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
+                      style={{ backgroundColor: notificationsEnabled ? '#16a34a' : '#fff', color: notificationsEnabled ? '#fff' : '#94a3b8', border: '1px solid ' + (notificationsEnabled ? '#16a34a' : '#e2e8f0'), borderRadius: '4px', fontSize: '11px' }}>
+                      {notificationsEnabled ? '🔔 On' : '🔔 Remind'}
+                    </button>
+                    <button onClick={downloadICSCalendar}
+                      title="Download calendar events for your garden plan"
+                      aria-label="Download calendar events"
+                      className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
+                      style={{ backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px' }}>
+                      📅 Calendar
+                    </button>
+                    <button onClick={() => {
+                      if (window.confirm('Remove all varieties from My Garden? This cannot be undone.')) {
+                        setMyGarden({});
+                      }
+                    }}
+                      title="Remove all varieties from your garden plan"
+                      aria-label="Unstar all varieties"
+                      className="filter-btn px-2.5 py-2 text-sm font-bold whitespace-nowrap"
+                      style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '11px' }}>
+                      ✕ Unstar All
+                    </button>
+                  </>
+                )}
+                {hasActiveFilters && (
+                  <button onClick={clearAllFilters}
+                    title="Reset all filters and search to defaults"
+                    aria-label="Clear all filters"
+                    className="filter-btn px-2.5 py-2 text-sm whitespace-nowrap"
+                    style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                    ✕ Clear all
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* Separator */}
-            <div className="hidden sm:block" style={{ width: '1px', height: '28px', backgroundColor: '#e2e8f0' }} />
-
-            {/* GROUP C: Display */}
-            <div>
-              <p className="hidden sm:block" style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#94a3b8', marginBottom: '2px' }}>View</p>
-              <div className="flex gap-2 flex-wrap items-center">
-              <button onClick={() => setBloomColorMode(!bloomColorMode)}
-                title="Toggle bloom color overlay on timeline bars"
-                className="filter-btn px-3 py-1.5 text-sm font-bold whitespace-nowrap"
-                style={bloomColorMode ? { backgroundColor: '#ec4899', color: '#fff', borderRadius: '12px', border: 'none', padding: '6px 12px' } : { backgroundColor: '#fff', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '6px 12px' }}>
-                Color
-              </button>
-              <div className="segment-group">
-                <button onClick={() => setViewMode(viewMode === 'overview' ? 'list' : 'overview')}
-                  title="Month-by-month summary of all planting actions"
-                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                  style={viewMode === 'overview' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
-                  Overview
-                </button>
-                <button onClick={() => setViewMode(viewMode === 'gantt' ? 'list' : 'gantt')}
-                  title="See when each species blooms across the year"
-                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                  style={viewMode === 'gantt' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
-                  Bloom Chart
-                </button>
-                <button onClick={() => setViewMode(viewMode === 'planting' ? 'list' : 'planting')}
-                  title="See indoor start, transplant, and sow windows"
-                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                  style={viewMode === 'planting' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
-                  Planting Chart
-                </button>
-                <button onClick={() => setViewMode(viewMode === 'weekly' ? 'list' : 'weekly')}
-                  title="Tasks organized by calendar week"
-                  className="filter-btn px-3.5 py-2 text-sm font-bold whitespace-nowrap"
-                  style={viewMode === 'weekly' ? { backgroundColor: '#1e293b', color: '#fff' } : { backgroundColor: '#fff', color: '#64748b' }}>
-                  Weekly
-                </button>
-              </div>
-              <button onClick={() => {
-                  navigator.clipboard.writeText(window.location.href).then(() => {
-                    setCopiedLink(true);
-                    setTimeout(() => setCopiedLink(false), 2000);
-                  });
-                }}
-                title="Copy a shareable link with your current filters"
-                className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
-                style={{ backgroundColor: copiedLink ? '#16a34a' : '#fff', color: copiedLink ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
-                {copiedLink ? '✓ Copied!' : '🔗 Share'}
-              </button>
-              <button onClick={() => { setCompareMode(!compareMode); setCompareSpecies([]); }}
-                title="Select two species to compare side-by-side"
-                className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
-                style={{ backgroundColor: compareMode ? '#6366f1' : '#fff', color: compareMode ? '#fff' : '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
-                {compareMode ? '✕ Cancel' : '⚖️ Compare'}
-              </button>
-              <button onClick={() => setDarkMode(!darkMode)}
-                title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="filter-btn px-2.5 py-1.5 text-sm whitespace-nowrap"
-                style={{ backgroundColor: darkMode ? '#334155' : '#fff', color: darkMode ? '#f1f5f9' : '#94a3b8', border: '1px solid ' + (darkMode ? '#475569' : '#e2e8f0'), borderRadius: '4px', fontSize: '13px' }}>
-                {darkMode ? '☀️' : '🌙'}
-              </button>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Phase legend row */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-2" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
@@ -2290,10 +2356,7 @@ function PlantingCalendar() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Species list */}
-      <div className="max-w-6xl mx-auto py-5" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+      <div role="main" className="max-w-6xl mx-auto py-5" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
         {viewMode === 'overview' ? (
           <div style={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '8px' }}>
             <h3 style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px', color: '#1e293b' }}>Seasonal Overview</h3>
@@ -2531,7 +2594,7 @@ function PlantingCalendar() {
           <div className="space-y-2">
             {/* Expand/Collapse all and info line */}
             <div className="flex justify-between items-center mb-3">
-              <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+              <span aria-live="polite" aria-atomic="true" style={{ fontSize: '12px', color: '#94a3b8' }}>
                 {sortedFiltered.length} species · {totalVarieties} varieties
                 {activeFilterCount > 0 && (
                   <span style={{ color: '#6366f1', fontWeight: 600 }}> · {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active</span>
@@ -2640,7 +2703,7 @@ function PlantingCalendar() {
               </div>
             )}
 
-            {/* This Week action card */}
+            {/* This Week action card or Next Action card */}
             {(() => {
               const actions = [];
               const window = 7; // this week only
@@ -2656,7 +2719,45 @@ function PlantingCalendar() {
                   actions.push({ phase: 'sow', action: 'Direct sow', species: sd.species, date: formatDoy(tl.sowStart), varieties: sd.varieties.length });
                 }
               });
-              if (actions.length === 0) return null;
+              
+              // If no actions this week, find the nearest upcoming action
+              if (actions.length === 0) {
+                let nextAction = null;
+                let minDaysDiff = Infinity;
+                speciesData.forEach(sd => {
+                  const tl = sd.tl;
+                  const candidates = [
+                    tl.indoorStart && { phase: 'indoor', action: 'Start indoors', species: sd.species, daysUntil: tl.indoorStart - todayDoy, varieties: sd.varieties.length },
+                    tl.transplant && { phase: 'transplant', action: 'Transplant outdoors', species: sd.species, daysUntil: tl.transplant - todayDoy, varieties: sd.varieties.length },
+                    tl.sowStart && { phase: 'sow', action: 'Direct sow', species: sd.species, daysUntil: tl.sowStart - todayDoy, varieties: sd.varieties.length },
+                  ].filter(c => c && c.daysUntil > 0);
+                  candidates.forEach(c => {
+                    if (c.daysUntil < minDaysDiff) {
+                      minDaysDiff = c.daysUntil;
+                      nextAction = c;
+                    }
+                  });
+                });
+                if (nextAction) {
+                  return (
+                    <div style={{ backgroundColor: '#fff', border: '2px solid #f59e0b', borderRadius: '8px', padding: '16px 20px', marginBottom: '12px' }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff', backgroundColor: '#f59e0b', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Next Action</span>
+                      </div>
+                      <div className="flex items-center gap-3" style={{ fontSize: '13px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: PHASE_COLORS[nextAction.phase].bg, flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, color: PHASE_COLORS[nextAction.phase].bg, minWidth: '120px' }}>{nextAction.action}</span>
+                        <button onClick={() => { setSearchTerm(nextAction.species); window.scrollTo(0, 0); }}
+                          style={{ fontWeight: 700, color: '#1e293b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', padding: 0 }}>
+                          {nextAction.species}
+                        </button>
+                        <span style={{ color: '#94a3b8', fontSize: '11px' }}>({nextAction.varieties} var) in {nextAction.daysUntil} day{nextAction.daysUntil !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }
               return (
                 <div style={{ backgroundColor: '#fff', border: '2px solid #6366f1', borderRadius: '8px', padding: '16px 20px', marginBottom: '12px' }}>
                   <div className="flex items-center gap-2 mb-3">
@@ -2737,6 +2838,8 @@ function PlantingCalendar() {
             {sortedFiltered.map(sd => (
             <LazyCard key={sd.species}>
             <div data-species={sd.species}
+              role="article"
+              aria-label={`${sd.species} species with ${sd.varieties.length} varieties`}
               draggable={filterMyGarden}
               onDragStart={filterMyGarden ? (e) => { setDraggedSpecies(sd.species); e.dataTransfer.effectAllowed = 'move'; } : undefined}
               onDragOver={filterMyGarden ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } : undefined}
@@ -2754,7 +2857,7 @@ function PlantingCalendar() {
               } : undefined}
               onDragEnd={() => setDraggedSpecies(null)}
               className={'species-card overflow-hidden ' + (expandedSpecies[sd.species] ? 'species-card-expanded' : 'species-card-collapsed')}
-              style={{ border: '1px solid ' + dm.border, backgroundColor: dm.cardBg, borderRadius: '8px', opacity: draggedSpecies === sd.species ? 0.5 : 1, cursor: filterMyGarden ? 'grab' : 'default' }}>
+              style={{ border: '1px solid ' + dm.border, backgroundColor: dm.cardBg, borderRadius: '8px', opacity: draggedSpecies === sd.species ? 0.5 : 1, cursor: filterMyGarden ? 'grab' : 'default', borderLeftColor: sd.bloomColor || '#6366f1' }}>
               <div className="flex gap-4 px-5 py-4 flex-col sm:flex-row">
                 {/* Species thumbnail */}
                 {(() => {
@@ -2777,7 +2880,7 @@ function PlantingCalendar() {
                 {/* Info column */}
                 <div className="flex-1 min-w-0 flex flex-col">
                   {/* Name row - THIS is the clickable part */}
-                  <button onClick={() => toggleSpecies(sd.species)} className="species-name-btn flex items-center gap-2 mb-1.5 text-left w-full" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                  <button onClick={() => toggleSpecies(sd.species)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSpecies(sd.species); } }} aria-expanded={expandedSpecies[sd.species] || false} className="species-name-btn flex items-center gap-2 mb-1.5 text-left w-full" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                     {compareMode && (
                       <input type="checkbox"
                         checked={compareSpecies.includes(sd.species)}
@@ -2813,8 +2916,10 @@ function PlantingCalendar() {
                   </button>
                   {/* Timeline bar - not inside button */}
                   <div className="mb-2">
-                    <YearBar tl={sd.tl} height={20} bloomColor={sd.bloomColor} />
+                    <YearBar tl={sd.tl} height={8} bloomColor={sd.bloomColor} showGridlines={false} />
                   </div>
+                  {expandedSpecies[sd.species] && (
+                  <>
                   {/* Detail rows - not inside button, text is selectable */}
                   <div style={{ fontSize: '11px', lineHeight: '20px', color: '#64748b' }}>
                       <div className="flex gap-2">
@@ -2986,6 +3091,8 @@ function PlantingCalendar() {
                         </div>
                       )}
                     </div>
+                  </>
+                  )}
                   </div>
                 </div>
 
@@ -3050,7 +3157,9 @@ function PlantingCalendar() {
                           </div>
                         )}
                         <div style={{ padding: '6px 8px 7px' }}>
-                          <p className="font-bold truncate" style={{ fontSize: '10px', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{v.name}</p>
+                          <a href={v.url || '#'} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
+                            <p className="font-bold truncate" style={{ fontSize: '10px', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{v.name}</p>
+                          </a>
                         </div>
                       </div>
                       );
@@ -3065,32 +3174,70 @@ function PlantingCalendar() {
         )}
 
         {filtered.length === 0 && (
-          <div className="p-16 text-center" style={{ border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#94a3b8' }}>
+          <div style={{ border: '1px solid ' + dm.border, backgroundColor: dm.cardBg, color: dm.text, borderRadius: '8px', padding: '48px 32px', textAlign: 'center', marginTop: '20px' }}>
             {filterMyGarden && Object.keys(myGarden).length === 0 ? (
               <>
-                <p className="text-lg font-medium mb-2" style={{ color: '#64748b' }}>Your garden is empty</p>
-                <p className="text-sm mb-3">Star (☆) varieties from any species to start building your garden plan.</p>
-                <p className="text-sm">Your selections save automatically between visits.</p>
+                <p style={{ fontSize: '18px', fontWeight: 700, marginBottom: '12px', color: dm.text }}>Your garden is empty</p>
+                <p style={{ fontSize: '14px', marginBottom: '12px', color: dm.textMuted }}>Star (☆) varieties from any species to start building your garden plan.</p>
+                <p style={{ fontSize: '14px', color: dm.textFaint }}>Your selections save automatically between visits.</p>
                 <button onClick={() => setFilterMyGarden(false)}
-                  style={{ marginTop: '12px', fontSize: '12px', color: '#6366f1', background: 'none', border: '1px solid #c7d2fe', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                  aria-label="Browse all species"
+                  style={{ marginTop: '20px', fontSize: '13px', color: '#6366f1', background: 'none', border: '1px solid #c7d2fe', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
                   Browse all species
                 </button>
               </>
             ) : (
               <>
-                <p className="text-lg font-medium mb-1">No matches</p>
-                <p className="text-sm">Try adjusting your search or filters.</p>
+                <p style={{ fontSize: '18px', fontWeight: 700, marginBottom: '12px', color: dm.text }}>No species match your current filters</p>
+                <p style={{ fontSize: '14px', marginBottom: '20px', color: dm.textMuted }}>Try adjusting your search or filters.</p>
                 {hasActiveFilters && (
-                  <button onClick={clearAllFilters}
-                    style={{ marginTop: '12px', fontSize: '12px', color: '#ef4444', background: 'none', border: '1px solid #fecaca', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
-                    Clear all filters
-                  </button>
-                )}
+                  <>
+                    <div style={{ backgroundColor: dm.altRow || (darkMode ? '#1e293b' : '#f1f5f9'), border: '1px solid ' + dm.border, borderRadius: '6px', padding: '16px', marginBottom: '20px', textAlign: 'left' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: dm.textMuted, marginBottom: '12px' }}>Active Filters:</p>
+                      <div className="flex flex-wrap gap-2" style={{ marginBottom: '8px' }}>
+                        {searchTerm && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Search: "{searchTerm}"</span>
+                        )}
+                        {filterSow !== 'all' && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Sow: {filterSow}</span>
+                        )}
+                        {filterType !== 'all' && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Type: {filterType}</span>
+                        )}
+                        {filterHeight !== 'all' && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Height: {filterHeight}</span>
+                        )}
+                        {filterColorFamily !== 'all' && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Color: {filterColorFamily}</span>
+                        )}
+                        {filterDeer !== 'all' && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Deer: {filterDeer}</span>
+                        )}
+                        {filterPollinator !== 'all' && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Pollinators: {filterPollinator}</span>
+                        )}
+                        {filterPlantNow && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Plant Now</span>
+                        )}
+                        {filterBloomNow && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Blooming</span>
+                        )}
+                        {filterMyGarden && (
+                          <span style={{ backgroundColor: dm.chipBg || '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>My Garden</span>
+                        )}
+                      </div>
+                    </div>
+                    <button onClick={clearAllFilters}
+                      aria-label="Clear all filters"
+                      style={{ marginTop: '12px', fontSize: '13px', color: '#ef4444', background: 'none', border: '1px solid #fecaca', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                      ✕ Clear all filters
+                    </button>
+              </>
+            )}
               </>
             )}
           </div>
         )}
-      </div>
 
       {/* Detail Modal */}
       {selectedVariety && (
@@ -3347,6 +3494,15 @@ function PlantingCalendar() {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <div style={{ backgroundColor: darkMode ? '#0f172a' : '#f1f5f9', borderTop: '1px solid ' + dm.border, marginTop: '40px', padding: '24px 20px' }}>
+        <div className="max-w-6xl mx-auto" style={{ textAlign: 'center', fontSize: '11px', color: dm.textMuted, lineHeight: '1.6' }}>
+          <p>Seed data sourced from <a href="https://www.rareseeds.com" target="_blank" rel="noopener noreferrer" style={{ color: dm.textMuted, textDecoration: 'underline', cursor: 'pointer' }}>Baker Creek Heirloom Seeds (rareseeds.com)</a></p>
+          <p style={{ marginTop: '8px' }}>Built with React · <a href="https://github.com/phjlljp/maine-garden-planner" target="_blank" rel="noopener noreferrer" style={{ color: dm.textMuted, textDecoration: 'underline', cursor: 'pointer' }}>View on GitHub</a></p>
+          <p style={{ marginTop: '8px', color: '#94a3b8', fontSize: '10px' }}>Last updated: February 2026</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3375,6 +3531,22 @@ if ('serviceWorker' in navigator) {
           }
           return resp;
         }).catch(() => caches.match('/maine-garden-planner/')))
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
+      </div>
       );
     });
   `;
