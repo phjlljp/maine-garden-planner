@@ -1229,7 +1229,6 @@ function PlantingCalendar() {
     try { return JSON.parse(localStorage.getItem('gardenOrder') || '[]'); } catch { return []; }
   });
   const [draggedSpecies, setDraggedSpecies] = useState(null);
-  const [bloomColorMode, setBloomColorMode] = useState(false);
   const [sortBy, setSortBy] = useState('alpha');
   const [filterHeight, setFilterHeight] = useState('all');
   const [filterColorFamily, setFilterColorFamily] = useState('all');
@@ -1401,7 +1400,6 @@ function PlantingCalendar() {
     if (filterColorFamily !== 'all') params.set('colorFamily', filterColorFamily);
     if (sortBy !== 'alpha') params.set('sort', sortBy);
     if (searchTerm) params.set('search', searchTerm);
-    if (bloomColorMode) params.set('color', '1');
     if (filterMyGarden) params.set('garden', '1');
     if (lastFrostOffset !== 0) params.set('frostL', String(lastFrostOffset));
     if (firstFrostOffset !== 0) params.set('frostF', String(firstFrostOffset));
@@ -1409,7 +1407,7 @@ function PlantingCalendar() {
     if (filterPollinator !== 'all') params.set('poll', filterPollinator);
     const hash = params.toString();
     window.history.replaceState(null, '', hash ? '#' + hash : window.location.pathname);
-  }, [viewMode, filterSow, filterType, filterHeight, filterColorFamily, sortBy, searchTerm, bloomColorMode, filterMyGarden, lastFrostOffset, firstFrostOffset, filterDeer, filterPollinator]);
+  }, [viewMode, filterSow, filterType, filterHeight, filterColorFamily, sortBy, searchTerm, filterMyGarden, lastFrostOffset, firstFrostOffset, filterDeer, filterPollinator]);
 
   React.useEffect(() => {
     const handleKey = (e) => {
@@ -1882,7 +1880,7 @@ function PlantingCalendar() {
               }}
               onMouseLeave={() => setTooltip(null)}
               onClick={() => setTooltip(prev => prev ? null : { text: PHASE_COLORS[seg.phase].label, dates: `${formatDoy(seg.startDoy)} – ${formatDoy(seg.endDoy)}`, tip: PHASE_TIPS[seg.phase] || '', left: seg.left + seg.width / 2 })}
-              style={{ left: seg.left + '%', width: Math.max(seg.width, 0.3) + '%', backgroundColor: seg.phase === 'bloom' && bloomColorMode && bloomColor ? bloomColor : PHASE_COLORS[seg.phase].bg, cursor: 'pointer' }} />
+              style={{ left: seg.left + '%', width: Math.max(seg.width, 0.3) + '%', backgroundColor: PHASE_COLORS[seg.phase].bg, cursor: 'pointer' }} />
           ))}
           {/* Today marker */}
           <div className="absolute" style={{ left: 'calc(' + todayPct + '% - 1px)', top: '-2px', bottom: '-2px', width: '2px', backgroundColor: '#c00', zIndex: 2 }} />
@@ -1904,7 +1902,7 @@ function PlantingCalendar() {
     const phase = getPhaseAtDoy(tl, todayDoy);
     if (phase === 'dormant') return null;
     const c = PHASE_COLORS[phase];
-    const bgColor = phase === 'bloom' && bloomColorMode && bloomColor ? bloomColor : c.bg;
+    const bgColor = c.bg;
     return <span className="text-xs px-2 py-0.5 font-bold uppercase" style={{ backgroundColor: bgColor, color: '#fff', letterSpacing: '0.08em', fontSize: '10px' }}>{c.label}</span>;
   };
 
@@ -2462,12 +2460,6 @@ function PlantingCalendar() {
             <div>
               <p className="hidden sm:block" style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: dm.textFaint, marginBottom: '2px' }}>View</p>
               <div className="flex gap-2 flex-wrap items-center">
-              <button onClick={() => setBloomColorMode(!bloomColorMode)}
-                title="Show actual bloom colors on timeline bars"
-                className="filter-btn px-3 py-1.5 text-sm font-bold whitespace-nowrap"
-                style={bloomColorMode ? { backgroundColor: '#ec4899', color: '#fff', borderRadius: '12px', border: 'none', padding: '6px 12px' } : { backgroundColor: dm.chipBg, color: dm.textMuted, border: '1px solid ' + dm.border, borderRadius: '12px', padding: '6px 12px' }}>
-                Bloom Colors
-              </button>
               <div className="segment-group">
                 <button onClick={() => setViewMode(viewMode === 'overview' ? 'list' : 'overview')}
                   title="Month-by-month summary of all planting actions"
@@ -2589,7 +2581,7 @@ function PlantingCalendar() {
                 {sortedFiltered.slice().sort((a, b) => (a.tl.bloomStart || 999) - (b.tl.bloomStart || 999)).map((sd, rowIdx) => {
                   const bloomLeft = ((sd.tl.bloomStart - 1) / 365) * 100;
                   const bloomWidth = ((sd.tl.bloomEnd - sd.tl.bloomStart) / 365) * 100;
-                  const color = bloomColorMode && sd.bloomColor ? sd.bloomColor : PHASE_COLORS.bloom.bg;
+                  const color = PHASE_COLORS.bloom.bg;
                   return (
                     <div key={sd.species} className="gantt-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: rowIdx % 2 === 0 ? 'transparent' : '#f8fafc', padding: '1px 4px', borderRadius: '2px' }}>
                       <button onClick={() => { setViewMode('list'); setExpandedSpecies(prev => ({ ...prev, [sd.species]: true })); }}
